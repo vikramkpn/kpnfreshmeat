@@ -423,7 +423,7 @@ const dash = v => (v === 0 || v === '0') ? '<span style="color:var(--muted)">—
 function outletLabel(id) {
   const map = {
     'OCHNANN06': 'Anna Nagar 06',
-    'OCHNPER01': 'Perambur 01',
+    'OCHNPER01': 'Perungudi 01',
   };
   return map[id] || id;
 }
@@ -619,7 +619,7 @@ async function fetchAndRender() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
     ALL_ROWS = parseCSV(text);
-    console.log(ALL_ROWS);
+    console.log(ALL_ROWS[0]);
     setDefaultDates();
     const filtered = getFilteredRows();
     render(filtered);
