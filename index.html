@@ -547,13 +547,34 @@ const totalOrdersMix = ecomOrders + posOrders;
 
 const ecomPct = pct(ecomOrders, totalOrdersMix);
 const posPct  = 100 - ecomPct;
-  document.getElementById('mix-bars').innerHTML = `
-    <div class="mix-seg" style="flex:${ecomOrders||0.01}; background:linear-gradient(135deg,#4fa3ff,#2d7dd2); color:#fff;">
-      ECOM<br><span style="font-size:11px;font-weight:400;">${ecomPct}%</span>
+document.getElementById('mix-bars').innerHTML = `
+  <div class="mix-seg" style="
+    flex:${ecomOrders||0.01};
+    background:linear-gradient(135deg,#4fa3ff,#2d7dd2);
+    color:#fff;
+    min-width:70px;
+    text-align:center;
+    padding:4px;
+  ">
+    <div>
+      <div style="font-size:12px;font-weight:700;">ECOM</div>
+      <div style="font-size:11px;font-weight:400;">${ecomPct}%</div>
     </div>
-    <div class="mix-seg" style="flex:${posOrders||0.01}; background:linear-gradient(135deg,#ff4f1f,#c93d10); color:#fff;">
-      POS<br><span style="font-size:11px;font-weight:400;">${posPct}%</span>
-    </div>`;
+  </div>
+
+  <div class="mix-seg" style="
+    flex:${posOrders||0.01};
+    background:linear-gradient(135deg,#ff4f1f,#c93d10);
+    color:#fff;
+    min-width:70px;
+    text-align:center;
+    padding:4px;
+  ">
+    <div>
+      <div style="font-size:12px;font-weight:700;">POS</div>
+      <div style="font-size:11px;font-weight:400;">${posPct}%</div>
+    </div>
+  </div>`;
   document.getElementById('mix-legend').innerHTML = `
     <span><div class="ch-dot" style="background:var(--ecom);width:8px;height:8px;border-radius:2px;display:inline-block;"></div> ECOM ${ecomOrders} Orders</span>
     <span><div class="ch-dot" style="background:var(--pos);width:8px;height:8px;border-radius:2px;display:inline-block;"></div> POS ${posOrders} Orders</span>`;
