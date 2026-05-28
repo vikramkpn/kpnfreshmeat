@@ -233,7 +233,7 @@
     <table>
       <thead>
         <tr>
-          <th>Product</th><th>KSIN</th><th>Outlet</th><th>Channel</th><th>Orders</th><th>Qty</th><th>GMV</th>
+          <th>KSIN</th><th>Product</th><th>Outlet</th><th>Channel</th><th>Orders</th><th>Qty</th><th>GMV</th>
         </tr>
       </thead>
       <tbody id="sku-tbody"></tbody>
@@ -481,13 +481,34 @@ function render(rows) {
   tbody.innerHTML = '';
   skuRows.forEach(r => {
     const ch = (r.channel || '').toUpperCase();
-    const outletShort = r.outlet_id ? r.outlet_id.replace('OCHN','') : r.outlet_id;
+    const outletShort =
+  r.outlet_id === 'OCHNANN06' ? 'Anna Nagar 06' :
+  r.outlet_id === 'OCHNPER01' ? 'Perungudi 01' :
+  r.outlet_id;
     tbody.innerHTML += `<tr>
-      <td><div class="sku-name">${r.kpn_title}</div></td>
       <td class="sku-id">${r.ksin}</td>
+      <td><div class="sku-name">${r.kpn_title}</div></td>
       <td>${outletShort}</td>
       <td><span class="ch-badge ${ch==='ECOM'?'ch-ecom':'ch-pos'}">${ch}</span></td>
-      <td>${r.order_count}</td>
+      <td>
+  <span style="
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:28px;
+    height:28px;
+    border-radius:50%;
+    font-weight:700;
+    color:#fff;
+    background:${
+      parseInt(r.order_count) >= 3 ? '#39d98a' :
+      parseInt(r.order_count) == 2 ? '#ffb347' :
+      '#4fa3ff'
+    };
+  ">
+    ${r.order_count}
+  </span>
+</td>
       <td>${r.total_qty} ${r.uom || ''}</td>
       <td class="gmv-cell">${fmt(r.total_gmv)}</td>
     </tr>`;
@@ -500,7 +521,9 @@ function render(rows) {
 
   // Gather all unique KSINs
   const ksinMap = {};
-  skuRows.forEach(r => {
+  skuRows
+  .sort((a,b) => parseInt(b.order_count||0) - parseInt(a.order_count||0))
+  .forEach(r => {
     if (!ksinMap[r.ksin]) ksinMap[r.ksin] = { name: r.kpn_title, o1off: 0, o1on: 0, o2off: 0, o2on: 0 };
     const ch = (r.channel || '').toUpperCase();
     const qty = parseInt(r.order_count || 0);
