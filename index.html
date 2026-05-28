@@ -364,21 +364,54 @@ function resetFilter() {
 
 // ── CSV PARSER ───────────────────────────────────────────────────────────────
 function parseCSV(text) {
+  const rows = [];
   const lines = text.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase().replace(/ /g,'_'));
-  return lines.slice(1).map(line => {
-    const cols = [];
-    let cur = '', inQ = false;
-    for (let c of line) {
-      if (c === '"') inQ = !inQ;
-      else if (c === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
-      else cur += c;
+
+  const headers = lines[0]
+    .split(',')
+    .map(h =>
+      h.trim()
+       .replace(/^"|"$/g, '')
+       .toLowerCase()
+       .replace(/ /g, '_')
+    );
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j];
+
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      }
+      else if (char === ',' && !inQuotes) {
+        values.push(current);
+        current = '';
+      }
+      else {
+        current += char;
+      }
     }
-    cols.push(cur.trim());
-    const row = {};
-    headers.forEach((h, i) => row[h] = (cols[i] || '').replace(/^"|"$/g,'').trim());
-    return row;
-  });
+
+    values.push(current);
+
+    const obj = {};
+
+    headers.forEach((header, index) => {
+      obj[header] = (values[index] || '')
+        .trim()
+        .replace(/^"|"$/g, '');
+    });
+
+    rows.push(obj);
+  }
+
+  return rows;
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -586,6 +619,7 @@ async function fetchAndRender() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
     ALL_ROWS = parseCSV(text);
+    console.log(ALL_ROWS);
     setDefaultDates();
     const filtered = getFilteredRows();
     render(filtered);
