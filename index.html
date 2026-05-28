@@ -268,7 +268,7 @@
 <!-- BOTTOM ROW -->
 <div class="bottom-row">
   <div class="mini-card">
-    <div class="section-title" style="font-size:12px; margin-bottom:8px;">Channel Mix · GMV</div>
+    <div class="section-title" style="font-size:12px; margin-bottom:8px;">Channel Mix · Orders</div>
     <div class="mix-bars" id="mix-bars"></div>
     <div class="mix-legend" id="mix-legend"></div>
   </div>
@@ -535,9 +535,18 @@ function render(rows) {
   </tr>`;
 
   // ── CHANNEL MIX ──────────────────────────────────────────────────────────
-  const ecomGMV = skuRows.filter(r => (r.channel||'').toUpperCase()==='ECOM').reduce((s,r)=>s+parseFloat(r.total_gmv||0),0);
-  const posGMV  = skuRows.filter(r => (r.channel||'').toUpperCase()==='POS').reduce((s,r)=>s+parseFloat(r.total_gmv||0),0);
-  const ecomPct = pct(ecomGMV, totalGMV), posPct = 100 - ecomPct;
+  const ecomOrders = skuRows
+  .filter(r => (r.channel||'').toUpperCase()==='ECOM')
+  .reduce((s,r)=>s+parseInt(r.order_count||0),0);
+
+const posOrders = skuRows
+  .filter(r => (r.channel||'').toUpperCase()==='POS')
+  .reduce((s,r)=>s+parseInt(r.order_count||0),0);
+
+const totalOrdersMix = ecomOrders + posOrders;
+
+const ecomPct = pct(ecomOrders, totalOrdersMix);
+const posPct  = 100 - ecomPct;
   document.getElementById('mix-bars').innerHTML = `
     <div class="mix-seg" style="flex:${ecomGMV||0.01}; background:linear-gradient(135deg,#4fa3ff,#2d7dd2); color:#fff;">
       ECOM<br><span style="font-size:11px;font-weight:400;">${ecomPct}%</span>
