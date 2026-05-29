@@ -24,10 +24,15 @@
     display: flex; justify-content: space-between; align-items: flex-start;
     margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border);
   }
-  .brand { display: flex; flex-direction: column; gap: 4px; }
-  .brand h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
-  .brand h1 span { color: var(--accent); }
+  .brand { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.brand-logos { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.brand-logos img { height: 96px; width: auto; object-fit: contain; display: block; }
+.brand-logos .logo-sep { width: 1px; height: 28px; background: var(--border); }
   .brand p { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .header-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+.dash-title { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); }
+.dash-title span { color: var(--accent); }
+.dash-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
   .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
   .date-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 18px; text-align: right; }
   .date-badge .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
@@ -288,9 +293,66 @@ th:nth-child(7) {
 
 <header>
   <div class="brand">
-    <h1>KPN Fresh <span>TenderCuts</span></h1>
+    <div class="brand-logos">
+      <img src="kpn-logo_1.png" alt="KPN Fresh">
+      <div class="logo-sep"></div>
+      <img src="logo_3.png" alt="TenderCuts">
+    </div>
     <p><span class="live-dot"></span>Sales Intelligence · Live Dashboard</p>
   </div>
+<div class="header-center">
+
+  <div class="dash-title">
+    Live Sales - <span>Dashboard</span>
+  </div>
+
+  <div class="dash-sub">
+    <span class="kpn">KPN</span> 
+    <span class="fresh">Fresh </span> 
+    - Meat Division -
+    <span class="tender"> Tender Cuts</span>
+  </div>
+
+</div>
+
+<style>
+  .header-center {
+    text-align: center;
+  }
+
+  .dash-title {
+    font-size: 28px;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 6px;
+  }
+
+  .dash-title span {
+    color: #ffffff;
+  }
+
+  .dash-sub {
+    font-size: 14px;
+    color: #ffffff;
+    opacity: 0.95;
+  }
+
+  .kpn {
+    color: #00c853; /* green */
+    font-weight: 600;
+  }
+
+  .fresh {
+    color: #ff9800; /* orange */
+    font-weight: 600;
+  }
+
+  .tender {
+    color: #e53935; /* red */
+    font-weight: 600;
+  }
+</style> 
+
   <div class="header-right">
     <div class="date-badge">
       <div class="label">Reporting Date</div>
@@ -590,36 +652,79 @@ function render(rows) {
   document.getElementById('kpi-aov').textContent    = fmt(aov);
 
 
-  // ── BILL PENETRATION ─────────────────────────────
-const posOrders = skuRows
-  .filter(r => (r.channel || '').toUpperCase() === 'POS')
-  .reduce((s, r) => s + parseInt(r.order_count || 0), 0);
+  // ── BILL PENETRATION ─────────────────────────────────────────────────────
+  // Formula: BP% = SKU-level order_count / OVERALL row order_count × 100
+  // OVERALL rows = rows where ksin is blank OR kpn_title === 'OVERALL'
+  // Must be computed per outlet per channel from the full (unfiltered-by-SKU) rows array.
+  const overallRows = rows.filter(r => !r.ksin || r.ksin.trim() === '' || (r.kpn_title||'').toUpperCase() === 'OVERALL');
 
-const ecomOrders = skuRows
-  .filter(r => (r.channel || '').toUpperCase() === 'ECOM')
-  .reduce((s, r) => s + parseInt(r.order_count || 0), 0);
+  // Build a lookup: overallOrders[outlet_id][channel] = order_count from OVERALL row
+  const overallOrders = {};
+  overallRows.forEach(r => {
+    const oid = r.outlet_id || '';
+    const ch  = (r.channel || '').toUpperCase();
+    if (!overallOrders[oid]) overallOrders[oid] = {};
+    overallOrders[oid][ch] = (overallOrders[oid][ch] || 0) + parseInt(r.order_count || 0);
+  });
 
-const totalOrdersBP = posOrders + ecomOrders;
+  // Build outlet-wise, channel-wise SKU order totals from skuRows
+  const skuOrders = {};
+  [...skuRows].sort((a, b) => parseInt(b.order_count || 0) - parseInt(a.order_count || 0)).forEach(r => {
+    const oid = r.outlet_id || '';
+    const ch  = (r.channel || '').toUpperCase();
+    if (!skuOrders[oid]) skuOrders[oid] = {};
+    skuOrders[oid][ch] = (skuOrders[oid][ch] || 0) + parseInt(r.order_count || 0);
+  });
 
-const bpPercent = totalOrdersBP ? Math.round((posOrders / totalOrdersBP) * 100) : 0;
-document.getElementById('bp-container').innerHTML = `
-  <div style="display:flex; justify-content:space-between;">
-    <div>
-      <div style="font-size:11px;color:var(--muted);">POS Orders</div>
-      <div style="font-size:18px;font-weight:700;color:var(--pos)">${posOrders}</div>
-    </div>
+  // Render BP cards: one row per outlet, ECOM and POS columns
+  const bpOutlets = [...new Set([
+    ...Object.keys(overallOrders),
+    ...Object.keys(skuOrders)
+  ])].filter(Boolean);
 
-    <div>
-      <div style="font-size:11px;color:var(--muted);">ECOM Orders</div>
-      <div style="font-size:18px;font-weight:700;color:var(--ecom)">${ecomOrders}</div>
-    </div>
+  let bpHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:6px 10px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);">Outlet</th>
+          <th style="text-align:center;padding:6px 10px;color:var(--ecom);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);">ECOM SKU Bills</th>
+          <th style="text-align:center;padding:6px 10px;color:var(--ecom);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);">ECOM Total Bills</th>
+          <th style="text-align:center;padding:6px 10px;color:var(--ecom);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);">ECOM BP%</th>
+          <th style="text-align:center;padding:6px 10px;color:var(--pos);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);">POS SKU Bills</th>
+          <th style="text-align:center;padding:6px 10px;color:var(--pos);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);">POS Total Bills</th>
+          <th style="text-align:center;padding:6px 10px;color:var(--pos);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);">POS BP%</th>
+        </tr>
+      </thead>
+      <tbody>`;
 
-    <div>
-      <div style="font-size:11px;color:var(--muted);">BP %</div>
-      <div style="font-size:22px;font-weight:800;color:var(--accent2)">${bpPercent}%</div>
-    </div>
-  </div>
-`;
+  bpOutlets.forEach(oid => {
+    const label = outletLabel(oid);
+    const channels = ['ECOM', 'POS'];
+    const cells = channels.map(ch => {
+      const skuBills   = (skuOrders[oid]    && skuOrders[oid][ch])    ? skuOrders[oid][ch]    : 0;
+      const totalBills = (overallOrders[oid] && overallOrders[oid][ch]) ? overallOrders[oid][ch] : 0;
+      const bp = totalBills ? ((skuBills / totalBills) * 100).toFixed(1) : '—';
+      const color = ch === 'ECOM' ? 'var(--ecom)' : 'var(--pos)';
+      return { skuBills, totalBills, bp, color };
+    });
+
+    bpHTML += `<tr>
+      <td style="padding:9px 10px;font-size:11px;font-weight:600;">${label}<div style="font-size:9px;color:var(--muted);margin-top:2px;">${oid}</div></td>
+      <td style="text-align:center;padding:9px 10px;color:var(--ecom);">${cells[0].skuBills}</td>
+      <td style="text-align:center;padding:9px 10px;color:var(--muted);">${cells[0].totalBills}</td>
+      <td style="text-align:center;padding:9px 10px;">
+        <span style="font-size:16px;font-weight:800;color:var(--ecom);">${cells[0].bp}${cells[0].bp !== '—' ? '%' : ''}</span>
+      </td>
+      <td style="text-align:center;padding:9px 10px;color:var(--pos);">${cells[1].skuBills}</td>
+      <td style="text-align:center;padding:9px 10px;color:var(--muted);">${cells[1].totalBills}</td>
+      <td style="text-align:center;padding:9px 10px;">
+        <span style="font-size:16px;font-weight:800;color:var(--pos);">${cells[1].bp}${cells[1].bp !== '—' ? '%' : ''}</span>
+      </td>
+    </tr>`;
+  });
+
+  bpHTML += `</tbody></table>`;
+  document.getElementById('bp-container').innerHTML = bpHTML;
 
   // ── OUTLET CARDS ────────────────────────────────────────────────────────
   const outletCardsEl = document.getElementById('outlet-cards');
