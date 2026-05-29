@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="kpn-logo_1.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <title>KPN Fresh Meat — Live Sales Dashboard</title>
 <style>
   :root {
@@ -61,6 +62,7 @@
   .kpi {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 20px; position: relative; overflow: hidden; transition: border-color 0.2s;
+    text-align: center;
   }
   .kpi:hover { border-color: var(--accent); }
   .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent-color, var(--accent)); }
@@ -93,16 +95,6 @@
 
 #kpi-aov {
   color: var(--accent2);
-}
-  .kpi {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.2s;
-  text-align: center;
 }
   .kpi .sub { font-size: 10px; color: var(--muted); margin-top: 6px; }
   /* MAIN GRID */
@@ -217,6 +209,7 @@ th:nth-child(7) {
 }
   /* BOTTOM ROW */
   .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  
   .mini-card { 
   background: var(--surface); 
   border: 1px solid var(--border); 
@@ -226,7 +219,8 @@ th:nth-child(7) {
 
 #dodChart {
   width: 100% !important;
-  height: 320px !important;
+  height: 100% !important;
+  display: block;
 }
   .mix-bars { display: flex; height: 48px; border-radius: 8px; overflow: hidden; margin: 12px 0; gap: 2px; }
   .mix-seg { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; transition: flex 1s cubic-bezier(0.4,0,0.2,1); }
@@ -238,6 +232,13 @@ th:nth-child(7) {
   .cmp-label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; }
   .cmp-val { font-weight: 700; font-size: 12px; }
   .last-updated { font-size: 10px; color: var(--muted); margin-top: 8px; text-align: right; }
+  /* DYNAMIC TABLE CELL STYLES */
+  .sku-id { font-family: monospace; font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .sku-name { font-size: 12px; font-weight: 600; }
+  .gmv-cell { font-weight: 700; color: var(--accent2); text-align: right; }
+  .ch-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .ch-ecom { background: rgba(79,163,255,0.15); color: var(--ecom); border: 1px solid rgba(79,163,255,0.3); }
+  .ch-pos  { background: rgba(255,79,31,0.12);  color: var(--pos);  border: 1px solid rgba(255,79,31,0.25); }
   /* DATE FILTER BAR */
   .filter-bar {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -339,19 +340,19 @@ th:nth-child(7) {
 <!-- OUTLET CARDS -->
 <div class="main-grid" id="outlet-cards">
   <!-- dynamically rendered -->
+</div>
 
-  <!-- SKU DETAIL TABLE -->
-  <div class="card sku-section">
-    <div class="section-title">Top SKUs Sold Today</div>
-    <table>
-      <thead>
-        <tr>
-          <th>KSIN</th><th>Product</th><th>Outlet</th><th>Channel</th><th>Orders</th><th>Qty</th><th>GMV</th>
-        </tr>
-      </thead>
-      <tbody id="sku-tbody"></tbody>
-    </table>
-  </div>
+<!-- SKU DETAIL TABLE -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="section-title">Top SKUs Sold Today</div>
+  <table>
+    <thead>
+      <tr>
+        <th>KSIN</th><th>Product</th><th>Outlet</th><th>Channel</th><th>Orders</th><th>Qty</th><th>GMV</th>
+      </tr>
+    </thead>
+    <tbody id="sku-tbody"></tbody>
+  </table>
 </div>
 
 <!-- SKU CROSS OUTLET TABLE -->
@@ -380,26 +381,60 @@ th:nth-child(7) {
 
 <!-- BOTTOM ROW -->
 <div class="bottom-row">
-  <div class="mini-card">
-    <div class="section-title" style="font-size:12px; margin-bottom:8px;">Channel Mix · Orders</div>
-    <div class="mix-bars" id="mix-bars"></div>
-    <div class="mix-legend" id="mix-legend"></div>
+  <!-- BILL PENETRATION -->
+<div class="mini-card">
+  <div class="section-title" style="font-size:12px; margin-bottom:12px;">
+    Bill Penetration %
   </div>
-  <div class="mini-card">
-    <div class="section-title" style="font-size:12px; margin-bottom:8px;">Outlet Comparison</div>
-    <div class="compare-bars" id="compare-bars"></div>
-  </div>
+  <div id="bp-container"></div>
 </div>
-<div class="last-updated" id="last-updated"></div>
 
+<!-- CHANNEL MIX -->
+<div class="mini-card">
+  <div class="section-title" style="font-size:12px;">
+    Channel Mix
+  </div>
+  <div id="mix-bars" class="mix-bars"></div>
+  <div id="mix-legend" class="mix-legend"></div>
+</div>
+
+<!-- OUTLET COMPARISON -->
+<div class="mini-card">
+  <div class="section-title" style="font-size:12px;">
+    Outlet Comparison
+  </div>
+  <div id="compare-bars" class="compare-bars"></div>
+</div>
+
+  
+  <!-- DOD TREND -->
+  <div class="mini-card">
+    <div class="section-title" style="font-size:12px; margin-bottom:12px;">
+      DoD Sales Trend
+    </div>
+
+    <div style="height:260px;">
+      <canvas id="dodChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<div class="last-updated" id="last-updated"></div>
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────────
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTBu45k7_jma6f7bNYzLpgZHO-YBxiauGVqR7mqhsi8Dd8sB08db_1o9TtTL2Od4u6zXGlELeaglBlX/pub?gid=1229171690&single=true&output=csv';
-const PROXY   = 'https://corsproxy.io/?';
 const REFRESH_MINS = 5;
 
 // ── GLOBAL STATE ─────────────────────────────────────────────────────────────
 let ALL_ROWS = []; // full dataset cached after fetch
+let userChangedDates = false; // track if user manually touched the filter
+
+// Mark dates as user-changed when they interact
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('date-from').addEventListener('change', () => { userChangedDates = true; });
+  document.getElementById('date-to').addEventListener('change',   () => { userChangedDates = true; });
+});
 
 // ── DATE HELPERS ─────────────────────────────────────────────────────────────
 // Parse dd-Mon-yyyy or dd/mm/yyyy or yyyy-mm-dd into a Date object
@@ -435,11 +470,11 @@ function todayStr() {
 }
 
 function setDefaultDates() {
-  // Always default both From and To to today
+  if (userChangedDates) return; // respect user's manual selection
   const fromEl = document.getElementById('date-from');
   const toEl   = document.getElementById('date-to');
-  if (!fromEl.value) fromEl.value = todayStr();
-  if (!toEl.value)   toEl.value   = todayStr();
+  fromEl.value = todayStr();
+  toEl.value   = todayStr();
 }
 
 function getFilteredRows() {
@@ -469,6 +504,7 @@ function applyFilter() {
 }
 
 function resetFilter() {
+  userChangedDates = false;
   document.getElementById('date-from').value = todayStr();
   document.getElementById('date-to').value   = todayStr();
   document.getElementById('filter-result').innerHTML = '';
@@ -513,6 +549,27 @@ function render(rows) {
   // Filter out OVERALL rows (blank ksin)
   const skuRows = rows.filter(r => r.ksin && r.ksin.trim() !== '' && r.kpn_title && r.kpn_title.toUpperCase() !== 'OVERALL');
 
+  // Hide loading screen now that we have a response
+  document.getElementById('loading-screen').style.display = 'none';
+
+  // Empty-state: no data for the selected date range
+  if (skuRows.length === 0) {
+    document.getElementById('report-date').textContent = '—';
+    document.getElementById('kpi-gmv').textContent    = '₹0';
+    document.getElementById('kpi-orders').textContent = '0';
+    document.getElementById('kpi-qty').textContent    = '0';
+    document.getElementById('kpi-aov').textContent    = '₹0';
+    document.getElementById('outlet-cards').innerHTML = `<div style="grid-column:span 2;padding:40px;text-align:center;color:var(--muted);font-size:13px;">No data found for the selected date range.</div>`;
+    document.getElementById('sku-tbody').innerHTML    = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">No SKU data available.</td></tr>`;
+    document.getElementById('cross-tbody').innerHTML  = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">No data available.</td></tr>`;
+    document.getElementById('cross-tfoot').innerHTML  = '';
+    document.getElementById('bp-container').innerHTML = '<div style="color:var(--muted);font-size:12px;padding:16px 0;">No data available.</div>';
+    document.getElementById('mix-bars').innerHTML     = '';
+    document.getElementById('mix-legend').innerHTML   = '';
+    document.getElementById('compare-bars').innerHTML = '';
+    return;
+  }
+
   // Detect outlets and date range from filter inputs
   const outlets = [...new Set(skuRows.map(r => r.outlet_id))];
   const fromVal = document.getElementById('date-from').value;
@@ -531,6 +588,38 @@ function render(rows) {
   document.getElementById('kpi-orders').textContent = totalOrders;
   document.getElementById('kpi-qty').textContent    = Math.round(totalQty);
   document.getElementById('kpi-aov').textContent    = fmt(aov);
+
+
+  // ── BILL PENETRATION ─────────────────────────────
+const posOrders = skuRows
+  .filter(r => (r.channel || '').toUpperCase() === 'POS')
+  .reduce((s, r) => s + parseInt(r.order_count || 0), 0);
+
+const ecomOrders = skuRows
+  .filter(r => (r.channel || '').toUpperCase() === 'ECOM')
+  .reduce((s, r) => s + parseInt(r.order_count || 0), 0);
+
+const totalOrdersBP = posOrders + ecomOrders;
+
+const bpPercent = totalOrdersBP ? Math.round((posOrders / totalOrdersBP) * 100) : 0;
+document.getElementById('bp-container').innerHTML = `
+  <div style="display:flex; justify-content:space-between;">
+    <div>
+      <div style="font-size:11px;color:var(--muted);">POS Orders</div>
+      <div style="font-size:18px;font-weight:700;color:var(--pos)">${posOrders}</div>
+    </div>
+
+    <div>
+      <div style="font-size:11px;color:var(--muted);">ECOM Orders</div>
+      <div style="font-size:18px;font-weight:700;color:var(--ecom)">${ecomOrders}</div>
+    </div>
+
+    <div>
+      <div style="font-size:11px;color:var(--muted);">BP %</div>
+      <div style="font-size:22px;font-weight:800;color:var(--accent2)">${bpPercent}%</div>
+    </div>
+  </div>
+`;
 
   // ── OUTLET CARDS ────────────────────────────────────────────────────────
   const outletCardsEl = document.getElementById('outlet-cards');
@@ -584,9 +673,8 @@ function render(rows) {
         <div class="t-val">${fmt(outletTotalGMV)}</div>
       </div>`;
 
-    // Insert before sku-section
-    const skuSection = outletCardsEl.querySelector('.sku-section');
-    outletCardsEl.insertBefore(card, skuSection);
+    // Append outlet card into the grid
+    outletCardsEl.appendChild(card);
   });
 
   // ── SKU DETAIL TABLE ─────────────────────────────────────────────────────
@@ -671,21 +759,18 @@ function render(rows) {
   </tr>`;
 
   // ── CHANNEL MIX ──────────────────────────────────────────────────────────
-  const ecomOrders = skuRows
-  .filter(r => (r.channel||'').toUpperCase()==='ECOM')
-  .reduce((s,r)=>s+parseInt(r.order_count||0),0);
-
-const posOrders = skuRows
-  .filter(r => (r.channel||'').toUpperCase()==='POS')
-  .reduce((s,r)=>s+parseInt(r.order_count||0),0);
-
-const totalOrdersMix = ecomOrders + posOrders;
-
-const ecomPct = pct(ecomOrders, totalOrdersMix);
-const posPct  = 100 - ecomPct;
+  const mixEcomOrders = skuRows
+    .filter(r => (r.channel||'').toUpperCase()==='ECOM')
+    .reduce((s,r)=>s+parseInt(r.order_count||0),0);
+  const mixPosOrders = skuRows
+    .filter(r => (r.channel||'').toUpperCase()==='POS')
+    .reduce((s,r)=>s+parseInt(r.order_count||0),0);
+  const totalOrdersMix = mixEcomOrders + mixPosOrders;
+  const ecomPct = pct(mixEcomOrders, totalOrdersMix);
+  const posPct  = 100 - ecomPct;
 document.getElementById('mix-bars').innerHTML = `
   <div class="mix-seg" style="
-    flex:${ecomOrders||0.01};
+    flex:${mixEcomOrders||0.01};
     background:linear-gradient(135deg,#4fa3ff,#2d7dd2);
     color:#fff;
     min-width:70px;
@@ -699,7 +784,7 @@ document.getElementById('mix-bars').innerHTML = `
   </div>
 
   <div class="mix-seg" style="
-    flex:${posOrders||0.01};
+    flex:${mixPosOrders||0.01};
     background:linear-gradient(135deg,#ff4f1f,#c93d10);
     color:#fff;
     min-width:70px;
@@ -712,8 +797,8 @@ document.getElementById('mix-bars').innerHTML = `
     </div>
   </div>`;
   document.getElementById('mix-legend').innerHTML = `
-    <span><div class="ch-dot" style="background:var(--ecom);width:8px;height:8px;border-radius:2px;display:inline-block;"></div> ECOM ${ecomOrders} Orders</span>
-    <span><div class="ch-dot" style="background:var(--pos);width:8px;height:8px;border-radius:2px;display:inline-block;"></div> POS ${posOrders} Orders</span>`;
+    <span><div class="ch-dot" style="background:var(--ecom);width:8px;height:8px;border-radius:2px;display:inline-block;"></div> ECOM ${mixEcomOrders} Orders</span>
+    <span><div class="ch-dot" style="background:var(--pos);width:8px;height:8px;border-radius:2px;display:inline-block;"></div> POS ${mixPosOrders} Orders</span>`;
 
   // ── OUTLET COMPARISON ────────────────────────────────────────────────────
   const compareBars = document.getElementById('compare-bars');
@@ -738,44 +823,32 @@ document.getElementById('mix-bars').innerHTML = `
       </div>`;
   });
 // ── DOD TREND CHART ─────────────────────────────────────────
+  const dailyMap = {};
+  skuRows.forEach(r => {
+    if (!r.dt) return;
+    const dt = r.dt.trim();
+    if (!dailyMap[dt]) dailyMap[dt] = { gmv: 0, orders: 0 };
+    dailyMap[dt].gmv    += parseFloat(r.total_gmv || 0);
+    dailyMap[dt].orders += parseInt(r.order_count || 0);
+  });
 
-const dailyMap = {};
+  // Sort labels chronologically
+  const chartLabels = Object.keys(dailyMap).sort((a, b) => {
+    const da = parseRowDate(a), db = parseRowDate(b);
+    return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+  });
+  const gmvData   = chartLabels.map(d => Math.round(dailyMap[d].gmv));
+  const orderData = chartLabels.map(d => dailyMap[d].orders);
 
-rows.forEach(r => {
-
-  if (!r.dt) return;
-
-  const dt = r.dt;
-
-  if (!dailyMap[dt]) {
-    dailyMap[dt] = {
-      gmv: 0,
-      orders: 0
-    };
+  // Destroy old chart before redraw
+  if (window.dodChartInstance) {
+    window.dodChartInstance.destroy();
   }
 
-  dailyMap[dt].gmv += parseFloat(r.total_gmv || 0);
-  dailyMap[dt].orders += parseInt(r.order_count || 0);
-
-});
-
-const labels = Object.keys(dailyMap);
-
-const gmvData = labels.map(d => Math.round(dailyMap[d].gmv));
-
-const orderData = labels.map(d => dailyMap[d].orders);
-
-// Destroy old chart before redraw
-if (window.dodChartInstance) {
-  window.dodChartInstance.destroy();
-}
-
-window.dodChartInstance = new Chart(document.getElementById('dodChart'), {
-
-  type: 'line',
-
-  data: {
-    labels: labels,
+  window.dodChartInstance = new Chart(document.getElementById('dodChart'), {
+    type: 'line',
+    data: {
+      labels: chartLabels,
 
     datasets: [
 
@@ -858,16 +931,37 @@ window.dodChartInstance = new Chart(document.getElementById('dodChart'), {
   // Last updated
   const now = new Date();
   document.getElementById('last-updated').textContent = `Last refreshed: ${now.toLocaleTimeString()} · Auto-refreshes every ${REFRESH_MINS} min`;
-  document.getElementById('loading-screen').style.display = 'none';
 }
 
 // ── FETCH ────────────────────────────────────────────────────────────────────
+const PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+  'https://cors-anywhere.herokuapp.com/',
+];
+
+async function tryFetch(url) {
+  for (const proxy of PROXIES) {
+    try {
+      const res = await fetch(proxy + encodeURIComponent(url), { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const text = await res.text();
+      // Validate it looks like CSV (first line should have commas, not HTML tags)
+      const firstLine = text.trim().split('\n')[0] || '';
+      if (firstLine.includes('<') || !firstLine.includes(',')) continue;
+      return text;
+    } catch (e) {
+      console.warn('Proxy failed:', proxy, e.message);
+    }
+  }
+  throw new Error('All proxies failed. Check internet connection.');
+}
+
 async function fetchAndRender() {
   document.getElementById('error-msg').style.display = 'none';
+  document.getElementById('loading-screen').style.display = 'flex';
   try {
-    const res  = await fetch(PROXY + encodeURIComponent(CSV_URL));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
+    const text = await tryFetch(CSV_URL);
     ALL_ROWS = parseCSV(text);
     setDefaultDates();
     const filtered = getFilteredRows();
@@ -881,20 +975,12 @@ async function fetchAndRender() {
   }
 }
 
-// ADD HERE
-const dodChart = new Chart(document.getElementById('dodChart'), {
-  ...
-});
+
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 setDefaultDates();
 fetchAndRender();
-
-// ── INIT ─────────────────────────────────────────────────────────────────────
-setDefaultDates(); // set today immediately before fetch
-fetchAndRender();
 setInterval(fetchAndRender, REFRESH_MINS * 60 * 1000);
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
