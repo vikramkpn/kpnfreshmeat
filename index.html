@@ -382,7 +382,7 @@ function parseCSV(text) {
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
-const fmt = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2});
+const fmt = n => '₹' + Math.round(Number(n)).toLocaleString('en-IN');
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const dash = v => (v === 0 || v === '0') ? '<span style="color:var(--muted)">—</span>' : `<strong>${v}</strong>`;
 
