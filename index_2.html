@@ -384,8 +384,8 @@ th:nth-child(7) {
   <table>
     <thead>
       <tr>
-        <th rowspan="2" style="vertical-align:middle; text-align:center;">KSIN</th>
-        <th rowspan="2" style="vertical-align:middle; text-align:center;">Product Name</th>
+        <th rowspan="2" style="vertical-align:bottom;">KSIN</th>
+        <th rowspan="2" style="vertical-align:bottom;">Product Name</th>
         <th colspan="2" id="outlet1-head" style="text-align:center; color:var(--accent2); background:#2a1f00; border-bottom:2px solid var(--accent2); border-left:2px solid var(--accent2); border-right:2px solid var(--accent2); padding:10px 14px; font-size:11px; letter-spacing:0.08em;">Outlet 1</th>
         <th colspan="2" id="outlet2-head" style="text-align:center; color:var(--blue); background:#001a2e; border-bottom:2px solid var(--blue); border-left:2px solid var(--blue); border-right:2px solid var(--blue); padding:10px 14px; font-size:11px; letter-spacing:0.08em;">Outlet 2</th>
         <th rowspan="2" style="vertical-align:middle; text-align:center; color:var(--green); background:rgba(57,217,138,0.1); border-left:2px solid var(--green); border-right:2px solid var(--green); font-size:11px; letter-spacing:0.08em;">Total</th>
@@ -496,8 +496,10 @@ function setDefaultDates() {
   if (userChangedDates) return; // respect user's manual selection
   const fromEl = document.getElementById('date-from');
   const toEl   = document.getElementById('date-to');
-  // Overall From/To filter always defaults to today only
-  fromEl.value = todayStr();
+  const today = new Date();
+  const fiveDaysAgo = new Date(today);
+  fiveDaysAgo.setDate(today.getDate() - 4); // 5-day window: 4 days ago → today
+  fromEl.value = toInputDate(fiveDaysAgo);
   toEl.value   = todayStr();
 }
 
@@ -807,8 +809,8 @@ function render(rows) {
     gtO1off += d.o1off; gtO1on += d.o1on; gtO2off += d.o2off; gtO2on += d.o2on;
     const total = d.o1off + d.o1on + d.o2off + d.o2on;
     crossTbody.innerHTML += `<tr>
-      <td class="sku-id" style="text-align:center;">${ksin}</td>
-      <td class="sku-name" style="text-align:center;">${d.name}</td>
+      <td class="sku-id">${ksin}</td>
+      <td class="sku-name">${d.name}</td>
       <td style="text-align:center; border-left:2px solid var(--accent2);">${dash(d.o1off)}</td>
       <td style="text-align:center; border-right:2px solid var(--accent2);">${dash(d.o1on)}</td>
       <td style="text-align:center; border-left:2px solid var(--blue);">${dash(d.o2off)}</td>
@@ -818,8 +820,7 @@ function render(rows) {
   });
   const grandTotal = gtO1off + gtO1on + gtO2off + gtO2on;
   document.getElementById('cross-tfoot').innerHTML = `<tr>
-    <td style="padding:10px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:0.08em;color:var(--accent2);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);text-align:center;">—</td>
-    <td style="padding:10px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:0.08em;color:var(--accent2);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);text-align:center;">Grand Total</td>
+    <td colspan="2" style="padding:10px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:0.08em;color:var(--accent2);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);">Grand Total</td>
     <td style="text-align:center;font-size:14px;color:var(--pos);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);border-left:2px solid var(--accent2);">${gtO1off}</td>
     <td style="text-align:center;font-size:14px;color:var(--ecom);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);border-right:2px solid var(--accent2);">${gtO1on}</td>
     <td style="text-align:center;font-size:14px;color:var(--pos);border-left:2px solid var(--blue);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);">${gtO2off}</td>
@@ -891,15 +892,9 @@ document.getElementById('mix-bars').innerHTML = `
         <div class="bar-track"><div class="bar-fill" style="width:${pct(ords,maxOrd)}%; background:${colors[i]}"></div></div>
       </div>`;
   });
-// ── DOD TREND CHART — always uses last 5 days from ALL_ROWS ─────────────────
-  const dodCutoff = new Date();
-  dodCutoff.setDate(dodCutoff.getDate() - 4); // 5-day window
-  const dodRows = ALL_ROWS.filter(r => {
-    const d = parseRowDate(r.dt);
-    return d && d >= dodCutoff;
-  });
+// ── DOD TREND CHART ─────────────────────────────────────────
   const dailyMap = {};
-  dodRows.forEach(r => {
+  skuRows.forEach(r => {
     if (!r.dt) return;
     const dt = r.dt.trim();
     const ch = (r.channel || '').toUpperCase();

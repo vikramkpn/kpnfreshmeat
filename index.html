@@ -384,17 +384,17 @@ th:nth-child(7) {
   <table>
     <thead>
       <tr>
-        <th rowspan="2" style="vertical-align:bottom;">KSIN</th>
-        <th rowspan="2" style="vertical-align:bottom;">Product Name</th>
-        <th colspan="2" id="outlet1-head" style="text-align:center; color:var(--accent2); border-bottom:1px solid var(--border); padding-bottom:4px;">Outlet 1</th>
-        <th colspan="2" id="outlet2-head" style="text-align:center; color:var(--blue); border-bottom:1px solid var(--border); padding-bottom:4px;">Outlet 2</th>
-        <th rowspan="2" style="vertical-align:bottom; text-align:right;">Total</th>
+        <th rowspan="2" style="vertical-align:middle; text-align:center;">KSIN</th>
+        <th rowspan="2" style="vertical-align:middle; text-align:center;">Product Name</th>
+        <th colspan="2" id="outlet1-head" style="text-align:center; color:var(--accent2); background:#2a1f00; border-bottom:2px solid var(--accent2); border-left:2px solid var(--accent2); border-right:2px solid var(--accent2); padding:10px 14px; font-size:11px; letter-spacing:0.08em;">Outlet 1</th>
+        <th colspan="2" id="outlet2-head" style="text-align:center; color:var(--blue); background:#001a2e; border-bottom:2px solid var(--blue); border-left:2px solid var(--blue); border-right:2px solid var(--blue); padding:10px 14px; font-size:11px; letter-spacing:0.08em;">Outlet 2</th>
+        <th rowspan="2" style="vertical-align:middle; text-align:center; color:var(--green); background:rgba(57,217,138,0.1); border-left:2px solid var(--green); border-right:2px solid var(--green); font-size:11px; letter-spacing:0.08em;">Total</th>
       </tr>
       <tr>
-        <th style="text-align:center; color:var(--pos);">Offline</th>
-        <th style="text-align:center; color:var(--ecom);">Online</th>
-        <th style="text-align:center; color:var(--pos);">Offline</th>
-        <th style="text-align:center; color:var(--ecom);">Online</th>
+        <th style="text-align:center; color:var(--pos); border-left:2px solid var(--accent2); border-bottom:2px solid var(--accent2); background:#1c1400;">POS</th>
+        <th style="text-align:center; color:var(--ecom); border-right:2px solid var(--accent2); border-bottom:2px solid var(--accent2); background:#1c1400;">ECOM</th>
+        <th style="text-align:center; color:var(--pos); border-left:2px solid var(--blue); border-bottom:2px solid var(--blue); background:#00111f;">POS</th>
+        <th style="text-align:center; color:var(--ecom); border-right:2px solid var(--blue); border-bottom:2px solid var(--blue); background:#00111f;">ECOM</th>
       </tr>
     </thead>
     <tbody id="cross-tbody"></tbody>
@@ -496,6 +496,7 @@ function setDefaultDates() {
   if (userChangedDates) return; // respect user's manual selection
   const fromEl = document.getElementById('date-from');
   const toEl   = document.getElementById('date-to');
+  // Overall From/To filter always defaults to today only
   fromEl.value = todayStr();
   toEl.value   = todayStr();
 }
@@ -806,23 +807,24 @@ function render(rows) {
     gtO1off += d.o1off; gtO1on += d.o1on; gtO2off += d.o2off; gtO2on += d.o2on;
     const total = d.o1off + d.o1on + d.o2off + d.o2on;
     crossTbody.innerHTML += `<tr>
-      <td class="sku-id">${ksin}</td>
-      <td class="sku-name">${d.name}</td>
-      <td style="text-align:center;">${dash(d.o1off)}</td>
-      <td style="text-align:center;">${dash(d.o1on)}</td>
-      <td style="text-align:center;">${dash(d.o2off)}</td>
-      <td style="text-align:center;">${dash(d.o2on)}</td>
-      <td style="text-align:right;" class="gmv-cell">${total > 0 ? total : '<span style="color:var(--muted)">0</span>'}</td>
+      <td class="sku-id" style="text-align:center;">${ksin}</td>
+      <td class="sku-name" style="text-align:center;">${d.name}</td>
+      <td style="text-align:center; border-left:2px solid var(--accent2);">${dash(d.o1off)}</td>
+      <td style="text-align:center; border-right:2px solid var(--accent2);">${dash(d.o1on)}</td>
+      <td style="text-align:center; border-left:2px solid var(--blue);">${dash(d.o2off)}</td>
+      <td style="text-align:center; border-left:1px solid var(--border); border-right:2px solid var(--blue);">${dash(d.o2on)}</td>
+      <td style="text-align:center; font-weight:800; color:var(--green); background:rgba(57,217,138,0.08); border-left:2px solid var(--green); border-right:2px solid var(--green);">${total > 0 ? `<span style="font-size:13px;">${total}</span>` : '<span style="color:var(--muted)">0</span>'}</td>
     </tr>`;
   });
   const grandTotal = gtO1off + gtO1on + gtO2off + gtO2on;
   document.getElementById('cross-tfoot').innerHTML = `<tr>
-    <td colspan="2" style="padding:10px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:0.08em;color:var(--accent2);">Grand Total</td>
-    <td style="text-align:center;font-size:14px;color:var(--pos);">${gtO1off}</td>
-    <td style="text-align:center;font-size:14px;color:var(--ecom);">${gtO1on}</td>
-    <td style="text-align:center;font-size:14px;color:var(--pos);">${gtO2off}</td>
-    <td style="text-align:center;font-size:14px;color:var(--ecom);">${gtO2on}</td>
-    <td style="text-align:right;font-size:14px;color:var(--accent2);">${grandTotal}</td>
+    <td style="border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);"></td>
+    <td style="padding:10px 12px;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:0.08em;color:var(--accent2);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);text-align:center;">Grand Total</td>
+    <td style="text-align:center;font-size:14px;color:var(--pos);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);border-left:2px solid var(--accent2);">${gtO1off}</td>
+    <td style="text-align:center;font-size:14px;color:var(--ecom);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);border-right:2px solid var(--accent2);">${gtO1on}</td>
+    <td style="text-align:center;font-size:14px;color:var(--pos);border-left:2px solid var(--blue);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);">${gtO2off}</td>
+    <td style="text-align:center;font-size:14px;color:var(--ecom);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);border-left:1px solid var(--border);border-right:2px solid var(--blue);">${gtO2on}</td>
+    <td style="text-align:center;font-size:16px;font-weight:800;color:var(--green);background:rgba(57,217,138,0.12);border-left:2px solid var(--green);border-right:2px solid var(--green);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);">${grandTotal}</td>
   </tr>`;
 
   // ── CHANNEL MIX ──────────────────────────────────────────────────────────
@@ -889,14 +891,21 @@ document.getElementById('mix-bars').innerHTML = `
         <div class="bar-track"><div class="bar-fill" style="width:${pct(ords,maxOrd)}%; background:${colors[i]}"></div></div>
       </div>`;
   });
-// ── DOD TREND CHART ─────────────────────────────────────────
+// ── DOD TREND CHART — always uses last 5 days from ALL_ROWS ─────────────────
+  const dodCutoff = new Date();
+  dodCutoff.setDate(dodCutoff.getDate() - 4); // 5-day window
+  const dodRows = ALL_ROWS.filter(r => {
+    const d = parseRowDate(r.dt);
+    return d && d >= dodCutoff && r.ksin && r.ksin.trim() !== '' && (r.kpn_title||'').toUpperCase() !== 'OVERALL';
+  });
   const dailyMap = {};
-  skuRows.forEach(r => {
+  dodRows.forEach(r => {
     if (!r.dt) return;
     const dt = r.dt.trim();
-    if (!dailyMap[dt]) dailyMap[dt] = { gmv: 0, orders: 0 };
-    dailyMap[dt].gmv    += parseFloat(r.total_gmv || 0);
-    dailyMap[dt].orders += parseInt(r.order_count || 0);
+    const ch = (r.channel || '').toUpperCase();
+    if (!dailyMap[dt]) dailyMap[dt] = { ecom: 0, pos: 0 };
+    if (ch === 'ECOM') dailyMap[dt].ecom += parseInt(r.order_count || 0);
+    if (ch === 'POS')  dailyMap[dt].pos  += parseInt(r.order_count || 0);
   });
 
   // Sort labels chronologically
@@ -904,8 +913,8 @@ document.getElementById('mix-bars').innerHTML = `
     const da = parseRowDate(a), db = parseRowDate(b);
     return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
   });
-  const gmvData   = chartLabels.map(d => Math.round(dailyMap[d].gmv));
-  const orderData = chartLabels.map(d => dailyMap[d].orders);
+  const ecomOrderData = chartLabels.map(d => dailyMap[d].ecom);
+  const posOrderData  = chartLabels.map(d => dailyMap[d].pos);
 
   // Destroy old chart before redraw
   if (window.dodChartInstance) {
@@ -916,85 +925,65 @@ document.getElementById('mix-bars').innerHTML = `
     type: 'line',
     data: {
       labels: chartLabels,
-
-    datasets: [
-
-      {
-        label: 'GMV',
-        data: gmvData,
-
-        borderColor: '#ffb347',
-        backgroundColor: 'rgba(255,179,71,0.15)',
-
-        borderWidth: 3,
-        tension: 0.35,
-        fill: true,
-
-        pointBackgroundColor: '#ffb347',
-        pointBorderColor: '#ffffff',
-        pointRadius: 5,
-        pointHoverRadius: 7
-      },
-
-      {
-        label: 'Orders',
-        data: orderData,
-
-        borderColor: '#4fa3ff',
-        backgroundColor: 'rgba(79,163,255,0.12)',
-
-        borderWidth: 3,
-        tension: 0.35,
-        fill: true,
-
-        pointBackgroundColor: '#4fa3ff',
-        pointBorderColor: '#ffffff',
-        pointRadius: 5,
-        pointHoverRadius: 7
-      }
-
-    ]
-  },
-
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-
-    plugins: {
-      legend: {
-        labels: {
-          color: '#f0ece4',
-          font: {
-            size: 12,
-            family: 'Calibri'
+      datasets: [
+        {
+          label: 'ECOM Orders',
+          data: ecomOrderData,
+          borderColor: '#4fa3ff',
+          backgroundColor: 'rgba(79,163,255,0.13)',
+          borderWidth: 3,
+          tension: 0.35,
+          fill: true,
+          pointBackgroundColor: '#4fa3ff',
+          pointBorderColor: '#ffffff',
+          pointRadius: 5,
+          pointHoverRadius: 7
+        },
+        {
+          label: 'POS Orders',
+          data: posOrderData,
+          borderColor: '#ff4f1f',
+          backgroundColor: 'rgba(255,79,31,0.10)',
+          borderWidth: 3,
+          tension: 0.35,
+          fill: true,
+          pointBackgroundColor: '#ff4f1f',
+          pointBorderColor: '#ffffff',
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: '#f0ece4',
+            font: { size: 12, family: 'Calibri' }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            title: ctx => ctx[0].label,
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} orders`
           }
         }
-      }
-    },
-
-    scales: {
-
-      x: {
-        ticks: {
-          color: '#bdb8b0'
-        },
-        grid: {
-          color: 'rgba(255,255,255,0.05)'
-        }
       },
-
-      y: {
-        ticks: {
-          color: '#bdb8b0'
+      scales: {
+        x: {
+          ticks: { color: '#bdb8b0' },
+          grid: { color: 'rgba(255,255,255,0.05)' }
         },
-        grid: {
-          color: 'rgba(255,255,255,0.05)'
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#bdb8b0', stepSize: 1, precision: 0 },
+          grid: { color: 'rgba(255,255,255,0.05)' }
         }
       }
-
     }
-  }
-});
+  });
   // Last updated
   const now = new Date();
   document.getElementById('last-updated').textContent = `Last refreshed: ${now.toLocaleTimeString()} · Auto-refreshes every ${REFRESH_MINS} min`;
