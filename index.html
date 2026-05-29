@@ -217,7 +217,17 @@ th:nth-child(7) {
 }
   /* BOTTOM ROW */
   .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .mini-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+  .mini-card { 
+  background: var(--surface); 
+  border: 1px solid var(--border); 
+  border-radius: 16px; 
+  padding: 20px; 
+}
+
+#dodChart {
+  width: 100% !important;
+  height: 320px !important;
+}
   .mix-bars { display: flex; height: 48px; border-radius: 8px; overflow: hidden; margin: 12px 0; gap: 2px; }
   .mix-seg { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; transition: flex 1s cubic-bezier(0.4,0,0.2,1); }
   .mix-legend { display: flex; gap: 16px; font-size: 10px; color: var(--muted); }
@@ -727,7 +737,124 @@ document.getElementById('mix-bars').innerHTML = `
         <div class="bar-track"><div class="bar-fill" style="width:${pct(ords,maxOrd)}%; background:${colors[i]}"></div></div>
       </div>`;
   });
+// ── DOD TREND CHART ─────────────────────────────────────────
 
+const dailyMap = {};
+
+rows.forEach(r => {
+
+  if (!r.dt) return;
+
+  const dt = r.dt;
+
+  if (!dailyMap[dt]) {
+    dailyMap[dt] = {
+      gmv: 0,
+      orders: 0
+    };
+  }
+
+  dailyMap[dt].gmv += parseFloat(r.total_gmv || 0);
+  dailyMap[dt].orders += parseInt(r.order_count || 0);
+
+});
+
+const labels = Object.keys(dailyMap);
+
+const gmvData = labels.map(d => Math.round(dailyMap[d].gmv));
+
+const orderData = labels.map(d => dailyMap[d].orders);
+
+// Destroy old chart before redraw
+if (window.dodChartInstance) {
+  window.dodChartInstance.destroy();
+}
+
+window.dodChartInstance = new Chart(document.getElementById('dodChart'), {
+
+  type: 'line',
+
+  data: {
+    labels: labels,
+
+    datasets: [
+
+      {
+        label: 'GMV',
+        data: gmvData,
+
+        borderColor: '#ffb347',
+        backgroundColor: 'rgba(255,179,71,0.15)',
+
+        borderWidth: 3,
+        tension: 0.35,
+        fill: true,
+
+        pointBackgroundColor: '#ffb347',
+        pointBorderColor: '#ffffff',
+        pointRadius: 5,
+        pointHoverRadius: 7
+      },
+
+      {
+        label: 'Orders',
+        data: orderData,
+
+        borderColor: '#4fa3ff',
+        backgroundColor: 'rgba(79,163,255,0.12)',
+
+        borderWidth: 3,
+        tension: 0.35,
+        fill: true,
+
+        pointBackgroundColor: '#4fa3ff',
+        pointBorderColor: '#ffffff',
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }
+
+    ]
+  },
+
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+
+    plugins: {
+      legend: {
+        labels: {
+          color: '#f0ece4',
+          font: {
+            size: 12,
+            family: 'Calibri'
+          }
+        }
+      }
+    },
+
+    scales: {
+
+      x: {
+        ticks: {
+          color: '#bdb8b0'
+        },
+        grid: {
+          color: 'rgba(255,255,255,0.05)'
+        }
+      },
+
+      y: {
+        ticks: {
+          color: '#bdb8b0'
+        },
+        grid: {
+          color: 'rgba(255,255,255,0.05)'
+        }
+      }
+
+    }
+  }
+});
   // Last updated
   const now = new Date();
   document.getElementById('last-updated').textContent = `Last refreshed: ${now.toLocaleTimeString()} · Auto-refreshes every ${REFRESH_MINS} min`;
@@ -754,10 +881,20 @@ async function fetchAndRender() {
   }
 }
 
+// ADD HERE
+const dodChart = new Chart(document.getElementById('dodChart'), {
+  ...
+});
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+setDefaultDates();
+fetchAndRender();
+
 // ── INIT ─────────────────────────────────────────────────────────────────────
 setDefaultDates(); // set today immediately before fetch
 fetchAndRender();
 setInterval(fetchAndRender, REFRESH_MINS * 60 * 1000);
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
