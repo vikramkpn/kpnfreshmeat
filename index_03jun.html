@@ -433,35 +433,11 @@ th:nth-child(7) {
   <!-- DOD TREND -->
   <div class="mini-card">
     <div class="section-title" style="font-size:12px; margin-bottom:12px;">
-      DoD Sales Trend · Last 7 Days
+      DoD Sales Trend
     </div>
 
     <div style="height:260px;">
       <canvas id="dodChart"></canvas>
-    </div>
-  </div>
-
-  <!-- SAME DAY LAST WEEK -->
-  <div class="mini-card sdlw-panel" style="grid-column: span 2; padding: 28px;">
-    <div class="section-title" style="font-size:12px; margin-bottom:0;">
-      Today vs Same Day Last Week
-    </div>
-
-    <!-- Date header strip -->
-    <div id="sdlw-datestrip" style="display:flex;align-items:center;gap:16px;margin:14px 0 20px;flex-wrap:wrap;"></div>
-
-    <!-- KPI scorecards -->
-    <div id="sdlw-scorecards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;"></div>
-
-    <!-- Chart + outlet breakdown side by side -->
-    <div style="display:grid;grid-template-columns:3fr 2fr;gap:24px;align-items:start;">
-      <div>
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:10px;">Orders by Channel &amp; Outlet</div>
-        <div style="height:220px;">
-          <canvas id="sdlwChart"></canvas>
-        </div>
-      </div>
-      <div id="sdlw-outlet-detail" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
   </div>
 
@@ -916,9 +892,9 @@ document.getElementById('mix-bars').innerHTML = `
         <div class="bar-track"><div class="bar-fill" style="width:${pct(ords,maxOrd)}%; background:${colors[i]}"></div></div>
       </div>`;
   });
-// ── DOD TREND CHART — always uses last 7 days from ALL_ROWS ─────────────────
+// ── DOD TREND CHART — always uses last 5 days from ALL_ROWS ─────────────────
   const dodCutoff = new Date();
-  dodCutoff.setDate(dodCutoff.getDate() - 6); // 7-day window
+  dodCutoff.setDate(dodCutoff.getDate() - 4); // 5-day window
   const dodRows = ALL_ROWS.filter(r => {
     const d = parseRowDate(r.dt);
     return d && d >= dodCutoff && r.ksin && r.ksin.trim() !== '' && (r.kpn_title||'').toUpperCase() !== 'OVERALL';
@@ -934,23 +910,12 @@ document.getElementById('mix-bars').innerHTML = `
   });
 
   // Sort labels chronologically
-  const chartLabelsSorted = Object.keys(dailyMap).sort((a, b) => {
+  const chartLabels = Object.keys(dailyMap).sort((a, b) => {
     const da = parseRowDate(a), db = parseRowDate(b);
     return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
   });
-  const ecomOrderData = chartLabelsSorted.map(d => dailyMap[d].ecom);
-  const posOrderData  = chartLabelsSorted.map(d => dailyMap[d].pos);
-
-  // Format x-axis labels: "(Sun)\n01 Jun"
-  const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const chartLabels = chartLabelsSorted.map(raw => {
-    const d = parseRowDate(raw);
-    if (!d) return raw;
-    const dayName = DAYS_SHORT[d.getDay()];
-    const dd = String(d.getDate()).padStart(2,'0');
-    const mon = d.toLocaleDateString('en-IN',{month:'short'});
-    return `(${dayName})\n${dd} ${mon}`;
-  });
+  const ecomOrderData = chartLabels.map(d => dailyMap[d].ecom);
+  const posOrderData  = chartLabels.map(d => dailyMap[d].pos);
 
   // Destroy old chart before redraw
   if (window.dodChartInstance) {
@@ -1002,19 +967,14 @@ document.getElementById('mix-bars').innerHTML = `
         },
         tooltip: {
           callbacks: {
-            title: ctx => ctx[0].label.replace('\n', ' '),
+            title: ctx => ctx[0].label,
             label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} orders`
           }
         }
       },
       scales: {
         x: {
-          ticks: {
-            color: '#bdb8b0',
-            font: { size: 11, family: 'Calibri' },
-            maxRotation: 0,
-            minRotation: 0
-          },
+          ticks: { color: '#bdb8b0' },
           grid: { color: 'rgba(255,255,255,0.05)' }
         },
         y: {
@@ -1025,227 +985,7 @@ document.getElementById('mix-bars').innerHTML = `
       }
     }
   });
-  // ── SAME DAY LAST WEEK — REDESIGNED ──────────────────────────────────────────
-  const todayLocal    = new Date();
-  const lastWeekLocal = new Date(todayLocal);
-  lastWeekLocal.setDate(lastWeekLocal.getDate() - 7);
-
-  function sameDay(d1, d2) {
-    return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth()    === d2.getMonth()    &&
-           d1.getDate()     === d2.getDate();
-  }
-
-  const sdlwChannels = ['ECOM', 'POS'];
-  const sdlwOutlets  = [...new Set(ALL_ROWS.map(r => r.outlet_id).filter(Boolean))];
-
-  // Aggregate: outlet → channel → { today, lastWeek, gmvToday, gmvLW }
-  const sdlwData = {};
-  sdlwOutlets.forEach(o => {
-    sdlwData[o] = {};
-    sdlwChannels.forEach(ch => { sdlwData[o][ch] = { today: 0, lastWeek: 0, gmvToday: 0, gmvLW: 0 }; });
-  });
-
-  ALL_ROWS.forEach(r => {
-    const d = parseRowDate(r.dt);
-    if (!d) return;
-    if (!r.ksin || r.ksin.trim() === '' || (r.kpn_title||'').toUpperCase() === 'OVERALL') return;
-    const ch  = (r.channel || '').toUpperCase();
-    const oid = r.outlet_id || '';
-    if (!sdlwData[oid] || !sdlwChannels.includes(ch)) return;
-    const cnt  = parseInt(r.order_count || 0);
-    const gmv  = parseFloat(r.total_gmv || 0);
-    if (sameDay(d, todayLocal))    { sdlwData[oid][ch].today    += cnt; sdlwData[oid][ch].gmvToday += gmv; }
-    if (sameDay(d, lastWeekLocal)) { sdlwData[oid][ch].lastWeek += cnt; sdlwData[oid][ch].gmvLW    += gmv; }
-  });
-
-  // ── Top-level totals for scorecards ────────────────────────────────────────
-  let totalTodayOrders=0, totalLWOrders=0, totalTodayGMV=0, totalLWGMV=0;
-  let ecomTodayOrders=0, ecomLWOrders=0, posTodayOrders=0, posLWOrders=0;
-  sdlwOutlets.forEach(o => {
-    sdlwChannels.forEach(ch => {
-      totalTodayOrders += sdlwData[o][ch].today;
-      totalLWOrders    += sdlwData[o][ch].lastWeek;
-      totalTodayGMV    += sdlwData[o][ch].gmvToday;
-      totalLWGMV       += sdlwData[o][ch].gmvLW;
-      if (ch === 'ECOM') { ecomTodayOrders += sdlwData[o][ch].today; ecomLWOrders += sdlwData[o][ch].lastWeek; }
-      if (ch === 'POS')  { posTodayOrders  += sdlwData[o][ch].today; posLWOrders  += sdlwData[o][ch].lastWeek; }
-    });
-  });
-
-  function changePct(t, lw) {
-    if (lw === 0) return t > 0 ? 100 : 0;
-    return ((t - lw) / lw * 100);
-  }
-  function badgeHTML(t, lw) {
-    const p = changePct(t, lw);
-    const pos = p >= 0;
-    return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;
-      padding:3px 8px;border-radius:20px;
-      background:${pos ? 'rgba(57,217,138,0.15)' : 'rgba(255,79,31,0.15)'};
-      color:${pos ? 'var(--green)' : 'var(--accent)'};">
-      ${pos ? '▲' : '▼'} ${Math.abs(p).toFixed(1)}%
-    </span>`;
-  }
-
-  // ── Date strip ─────────────────────────────────────────────────────────────
-  const todayFmt   = todayLocal.toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'short',year:'numeric'});
-  const lwFmt      = lastWeekLocal.toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'short',year:'numeric'});
-  document.getElementById('sdlw-datestrip').innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;background:rgba(79,163,255,0.08);border:1px solid rgba(79,163,255,0.25);border-radius:8px;padding:8px 16px;">
-      <span style="width:10px;height:10px;border-radius:50%;background:#4fa3ff;flex-shrink:0;box-shadow:0 0 8px #4fa3ff88;"></span>
-      <span style="font-size:11px;font-weight:700;color:#4fa3ff;text-transform:uppercase;letter-spacing:0.08em;">TODAY</span>
-      <span style="font-size:12px;color:var(--text);">${todayFmt}</span>
-    </div>
-    <div style="font-size:18px;color:var(--muted);">vs</div>
-    <div style="display:flex;align-items:center;gap:10px;background:rgba(255,179,71,0.08);border:1px solid rgba(255,179,71,0.25);border-radius:8px;padding:8px 16px;">
-      <span style="width:10px;height:10px;border-radius:50%;background:var(--accent2);flex-shrink:0;box-shadow:0 0 8px #ffb34788;"></span>
-      <span style="font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:0.08em;">LAST WEEK</span>
-      <span style="font-size:12px;color:var(--text);">${lwFmt}</span>
-    </div>`;
-
-  // ── Scorecards ─────────────────────────────────────────────────────────────
-  const cards = [
-    { label: 'Total Orders', today: totalTodayOrders, lw: totalLWOrders, fmt: v => v, color: 'var(--green)', icon: '📦' },
-    { label: 'Total GMV',    today: totalTodayGMV,    lw: totalLWGMV,    fmt: v => fmt(v), color: 'var(--accent2)', icon: '₹' },
-    { label: 'ECOM Orders',  today: ecomTodayOrders,  lw: ecomLWOrders,  fmt: v => v, color: 'var(--ecom)', icon: '🛒' },
-    { label: 'POS Orders',   today: posTodayOrders,   lw: posLWOrders,   fmt: v => v, color: 'var(--pos)', icon: '🏪' },
-  ];
-  document.getElementById('sdlw-scorecards').innerHTML = cards.map(c => `
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${c.color};border-radius:12px 12px 0 0;"></div>
-      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">${c.label}</div>
-      <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
-        <div style="font-size:28px;font-weight:800;color:${c.color};line-height:1;">${c.fmt(c.today)}</div>
-        ${badgeHTML(c.today, c.lw)}
-      </div>
-      <div style="margin-top:8px;font-size:11px;color:var(--muted);">
-        Last Week: <span style="color:var(--text);font-weight:600;">${c.fmt(c.lw)}</span>
-      </div>
-    </div>`).join('');
-
-  // ── Chart: grouped bars per outlet+channel ─────────────────────────────────
-  const sdlwBarLabels = [];
-  const sdlwBarToday  = [];
-  const sdlwBarLW     = [];
-  const sdlwBarBgToday = [];
-  const sdlwBarBgLW    = [];
-
-  sdlwOutlets.forEach(oid => {
-    sdlwChannels.forEach(ch => {
-      const short = outletLabel(oid).replace(/Anna Nagar/,'AN').replace(/Perungudi/,'PER');
-      sdlwBarLabels.push(`${short}
-${ch}`);
-      sdlwBarToday.push(sdlwData[oid][ch].today);
-      sdlwBarLW.push(sdlwData[oid][ch].lastWeek);
-      sdlwBarBgToday.push(ch === 'ECOM' ? 'rgba(79,163,255,0.85)' : 'rgba(255,79,31,0.85)');
-      sdlwBarBgLW.push(ch === 'ECOM' ? 'rgba(79,163,255,0.28)' : 'rgba(255,79,31,0.28)');
-    });
-  });
-
-  if (window.sdlwChartInstance) window.sdlwChartInstance.destroy();
-
-  const todayDateLabel  = todayLocal.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
-  const lwDateLabel     = lastWeekLocal.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
-
-  window.sdlwChartInstance = new Chart(document.getElementById('sdlwChart'), {
-    type: 'bar',
-    data: {
-      labels: sdlwBarLabels,
-      datasets: [
-        {
-          label: `Today (${todayDateLabel})`,
-          data: sdlwBarToday,
-          backgroundColor: sdlwBarBgToday,
-          borderColor: sdlwBarBgToday.map(c => c.replace(/0\.\d+\)/,'1)')),
-          borderWidth: 1.5,
-          borderRadius: 6,
-          borderSkipped: false,
-        },
-        {
-          label: `Last Week (${lwDateLabel})`,
-          data: sdlwBarLW,
-          backgroundColor: sdlwBarBgLW,
-          borderColor: sdlwBarBgLW.map(c => c.replace(/0\.\d+\)/,'0.6)')),
-          borderWidth: 1.5,
-          borderRadius: 6,
-          borderSkipped: false,
-          borderDash: [4,3],
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { color:'#f0ece4', font:{ size:11, family:'Calibri' }, boxWidth:14, padding:14 } },
-        tooltip: {
-          backgroundColor: '#1f1f1f',
-          borderColor: '#2a2a2a',
-          borderWidth: 1,
-          titleColor: '#f0ece4',
-          bodyColor: '#bdb8b0',
-          callbacks: {
-            title: ctx => ctx[0].label.replace('\n',' · '),
-            label: ctx => `  ${ctx.dataset.label}: ${ctx.parsed.y} orders`
-          }
-        }
-      },
-      scales: {
-        x: {
-          ticks: { color:'#bdb8b0', font:{ size:10, family:'Calibri' }, maxRotation:0 },
-          grid: { color:'rgba(255,255,255,0.04)' }
-        },
-        y: {
-          beginAtZero: true,
-          ticks: { color:'#bdb8b0', precision:0 },
-          grid: { color:'rgba(255,255,255,0.05)' }
-        }
-      }
-    }
-  });
-
-  // ── Outlet detail panel (right side) ───────────────────────────────────────
-  const detailEl = document.getElementById('sdlw-outlet-detail');
-  detailEl.innerHTML = `<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:6px;">Outlet Scorecard</div>`;
-  sdlwOutlets.forEach(oid => {
-    const label = outletLabel(oid);
-    let outletHTML = `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
-        <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:12px;font-weight:700;color:var(--text);">${label}</span>
-          <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">${oid}</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;">`;
-
-    sdlwChannels.forEach((ch, ci) => {
-      const t  = sdlwData[oid][ch].today;
-      const lw = sdlwData[oid][ch].lastWeek;
-      const p  = changePct(t, lw);
-      const pos = p >= 0;
-      const chColor = ch === 'ECOM' ? 'var(--ecom)' : 'var(--pos)';
-      const borderRight = ci === 0 ? 'border-right:1px solid var(--border);' : '';
-      outletHTML += `
-          <div style="padding:12px 14px;${borderRight}">
-            <div style="font-size:9px;color:${chColor};text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:6px;">${ch}</div>
-            <div style="font-size:20px;font-weight:800;color:${chColor};line-height:1;">${t}</div>
-            <div style="font-size:9px;color:var(--muted);margin-top:4px;">LW: ${lw}</div>
-            <div style="margin-top:5px;">
-              <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;
-                background:${pos ? 'rgba(57,217,138,0.15)' : 'rgba(255,79,31,0.15)'};
-                color:${pos ? 'var(--green)' : 'var(--accent)'};">
-                ${pos ? '▲' : '▼'} ${Math.abs(p).toFixed(1)}%
-              </span>
-            </div>
-          </div>`;
-    });
-    outletHTML += `</div></div>`;
-    detailEl.innerHTML += outletHTML;
-  });
-
   // Last updated
-
-  
   const now = new Date();
   document.getElementById('last-updated').textContent = `Last refreshed: ${now.toLocaleTimeString()} · Auto-refreshes every ${REFRESH_MINS} min`;
 }
